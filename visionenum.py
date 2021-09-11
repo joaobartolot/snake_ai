@@ -8,7 +8,7 @@ class Vision(Enum):
 
 
 class Direction(Enum):
-    LEFT = 'left'
-    RIGHT = 'right'
-    UP = 'up'
-    DOWN = 'down'
+    LEFT = (-10, 0)
+    RIGHT = (10, 0)
+    UP = (0, -10)
+    DOWN = (0, 10)

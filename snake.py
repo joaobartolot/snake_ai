@@ -17,19 +17,22 @@ class Snake:
 
     def vision(self, food: Food):
         # TODO: implement vision for the AI
-        look_x = (
-            (self.head.x + self.head.size) if self.vel() == (10, 0) else 0,
-            (self.head.x - self.head.size) if self.vel() == (-10, 0) else WIDTH,
-        )
-        look_y = (
-            (self.head.y + self.head.size) if self.vel() == (0, 10) else 0,
-            (self.head.y - self.head.size) if self.vel() == (0, -10) else HEIGH,
-        )
+        # look_x = (
+        #     (self.head.x + self.head.size) if self.vel() == (10, 0) else 0,
+        #     (self.head.x - self.head.size) if self.vel() == (-10, 0) else WIDTH,
+        # )
+        # look_y = (
+        #     (self.head.y + self.head.size) if self.vel() == (0, 10) else 0,
+        #     (self.head.y - self.head.size) if self.vel() == (0, -10) else HEIGH,
+        # )
 
         vision = [0, 0, 0, 0, 0]
 
-        # # See in the x axis
-        # for x in range(look_x[0], look_x[1], 10):
+        if self.head.vel() == Direction.LEFT:
+            for i in range():
+                pass
+            # # See in the x axis
+            # for x in range(look_x[0], look_x[1], 10):
 
     def update(self, screen):
         last_head_pos = self.head.pos()
@@ -92,6 +95,7 @@ class Body:
         self.size: int = 10
         self.velocity_x: int = 0
         self.velocity_y: int = 0
+        self.direction: Direction = None
         self.color = c
 
     def update(self, screen: Surface, next_pos: set[int, int]) -> None:
@@ -102,14 +106,10 @@ class Body:
                   self.x, self.y, self.size, self.size])
 
     def __update_vel(self, next_pos):
-        if next_pos[0] == self.x:
-            self.velocity_x = 0
-        else:
-            self.velocity_x = 10 if next_pos[0] > self.x else -10
-        if next_pos[1] == self.y:
-            self.velocity_y = 0
-        else:
-            self.velocity_y = 10 if next_pos[1] > self.y else -10
+        if next_pos[0] != self.x:
+            self.direction = Direction.RIGHT if next_pos[0] > self.x else Direction.LEFT
+        elif next_pos[1] != self.y:
+            self.direction = Direction.UP if next_pos[1] > self.x else Direction.DOWN
 
     def __update_pos(self, next_pos):
         self.x = next_pos[0]
@@ -119,7 +119,7 @@ class Body:
         return self.x, self.y
 
     def vel(self):
-        return self.velocity_x, self.velocity_y
+        return self.direction.value
 
 
 class Head(Body):
@@ -135,25 +135,19 @@ class Head(Body):
                   self.y, self.size, self.size])
 
     def __update_pos(self):
-        self.x += self.velocity_x
-        self.y += self.velocity_y
+        if self.direction != None:
+            self.x += self.direction.value[0]
+            self.y += self.direction.value[1]
 
     def change_direction(self, key) -> None:
-        if key == K_LEFT and self.velocity_x != self.velocity and self.moving:
-            print('LEFT')
-            self.velocity_x = -self.velocity
-            self.velocity_y = 0
-        elif key == K_RIGHT and self.velocity_x != -self.velocity:
-            print('RIGHT')
-            self.velocity_x = self.velocity
-            self.velocity_y = 0
-        elif key == K_UP and self.velocity_y != self.velocity:
-            print('UP')
-            self.velocity_y = -self.velocity
-            self.velocity_x = 0
-        elif key == K_DOWN and self.velocity_y != -self.velocity:
-            print('DOWN')
-            self.velocity_y = self.velocity
-            self.velocity_x = 0
+        if key == K_LEFT and self.direction != Direction.RIGHT and self.moving:
+            self.direction = Direction.LEFT
+        elif key == K_RIGHT and self.direction != Direction.LEFT:
+            self.direction = Direction.RIGHT
+        elif key == K_UP and self.direction != Direction.DOWN:
+            self.direction = Direction.UP
+        elif key == K_DOWN and self.direction != Direction.UP:
+            self.direction = Direction.DOWN
+            self.velocity_x, self.velocity_y = Direction.DOWN.value
 
         self.moving = True
