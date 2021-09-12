@@ -1,9 +1,11 @@
-from visionenum import Direction
+import pygame
+from visionenum import Direction, Vision
 from food import Food
 from pygame.constants import HAT_CENTERED
-from constants import GREEN, HEIGH, RED, WHITE, WIDTH
+from constants import BLACK, GREEN, GREY, HEIGH, RED, WHITE, WIDTH
 from pygame import Surface, draw
 from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
+import math
 
 
 class Snake:
@@ -13,9 +15,10 @@ class Snake:
             Body(self.head.x - self.head.size, self.head.y),
             Body(self.head.x - (self.head.size * 2), self.head.y),
         ]
+        self.vision: dict[str, tuple[(Vision, int)]] = {}
         self.score = 0
 
-    def vision(self, food: Food):
+    def look_around(self, food: Food):
         # TODO: implement vision for the AI
         # look_x = (
         #     (self.head.x + self.head.size) if self.vel() == (10, 0) else 0,
@@ -26,15 +29,85 @@ class Snake:
         #     (self.head.y - self.head.size) if self.vel() == (0, -10) else HEIGH,
         # )
 
-        vision = [0, 0, 0, 0, 0]
+        # wall_dist = self.__get_wall_dist()
+        # food_dist = self.
+        # body_dist = []
 
-        if self.head.vel() == Direction.LEFT:
-            for i in range():
-                pass
-            # # See in the x axis
-            # for x in range(look_x[0], look_x[1], 10):
+        self.vision['left'] = (Vision.WALL, self.head.x)
+        self.vision['right'] = (Vision.WALL,  WIDTH - self.head.x)
+        self.vision['up'] = (Vision.WALL, self.head.y)
+        self.vision['down'] = (Vision.WALL,  HEIGH - self.head.y)
 
-    def update(self, screen):
+        for x in range(0, WIDTH + self.head.size, self.head.size):
+            for b in self.body:
+                if b.x == x and b.y == self.head.y:
+                    if self.head.x > x:
+                        self.vision['left'] = (Vision.BODY, self.head.x - x)
+                    else:
+                        self.vision['right'] = (Vision.BODY,  x - self.head.x)
+                        break
+            if food.x == x and food.y == self.head.y:
+                if self.head.x > x:
+                    self.vision['left'] = (Vision.FOOD, self.head.x - x)
+                else:
+                    if self.vision['right'][0] != Vision.BODY or self.vision['right'][1] < x-self.head.x:
+                        self.vision['right'] = (Vision.FOOD,  x - self.head.x)
+                        break
+
+        for y in range(0, HEIGH + self.head.size, self.head.size):
+            for b in self.body:
+                if b.y == y and b.x == self.head.x:
+                    if self.head.y > y:
+                        self.vision['up'] = (Vision.BODY, self.head.y - y)
+                    else:
+                        self.vision['down'] = (Vision.BODY,  y - self.head.y)
+                        break
+            if food.y == y and food.x == self.head.x:
+                if self.head.y > y:
+                    self.vision['up'] = (Vision.FOOD, self.head.y - y)
+                else:
+                    if self.vision['down'][0] != Vision.BODY or self.vision['down'][1] > y-self.head.y:
+                        self.vision['down'] = (Vision.FOOD,  y - self.head.y)
+                        break
+
+    def __draw_vision(self, screen: Surface):
+        if len(self.vision.values()) > 0:
+            color = pygame.Color(100, 100, 100, 10)
+            for y in range(0, HEIGH + self.head.size, self.head.size):
+                if y < self.head.y:
+                    color = self.vision['up'][0].get_color()
+                    draw.circle(screen, color, (self.head.x +
+                                                (self.head.size/2), y + (self.head.size/2)), 2)
+                elif y > self.head.y:
+                    color = self.vision['down'][0].get_color()
+                    draw.circle(screen, color, (self.head.x +
+                                                (self.head.size/2), y + (self.head.size/2)), 2)
+
+            for x in range(0, WIDTH + self.head.size, self.head.size):
+                if x < self.head.x:
+                    color = self.vision['left'][0].get_color()
+                    draw.circle(screen, color, (x + (self.head.size/2), (self.head.y +
+                                                                         (self.head.size/2))), 2)
+                elif x > self.head.x:
+                    color = self.vision['right'][0].get_color()
+                    draw.circle(screen, color,  (x + (self.head.size/2), (self.head.y +
+                                                                          (self.head.size/2))), 2)
+
+    def __get_wall_dist(self):
+        # returns the distance from the snake's head to the wall for all 8 directions
+        x, y = self.head.x, self.head.y
+        return (
+            x,
+            math.sqrt((x**2 + y**2)),
+            y,
+            math.sqrt(((WIDTH - x)**2 + y**2)),
+            WIDTH - x,
+            math.sqrt(((WIDTH - x)**2 + (HEIGH - y)**2)),
+            (HEIGH - y),
+            math.sqrt((x**2 + (HEIGH - y)**2)),
+        )
+
+    def update(self, screen, show_vision=False):
         last_head_pos = self.head.pos()
         self.head.update(screen)
 
@@ -51,6 +124,9 @@ class Snake:
                     pos.pop(0)
             else:
                 b.update(screen, b.pos())
+
+        if show_vision:
+            self.__draw_vision(screen)
 
     def change_direction(self, key):
         self.head.change_direction(key)
@@ -76,7 +152,7 @@ class Snake:
 
         if self.head.x > WIDTH or self.head.x < 0:
             return True
-        elif self.head.y > HEIGH or self.head.y < 0:
+        elif self.head.y > HEIGH or self.head.y == -10:
             return True
 
         return False
@@ -90,8 +166,8 @@ class Snake:
 
 class Body:
     def __init__(self, x: int = (WIDTH/2), y: int = (HEIGH/2), c=WHITE) -> None:
-        self.x: int = x
-        self.y: int = y
+        self.x: int = int(x)
+        self.y: int = int(y)
         self.size: int = 10
         self.velocity_x: int = 0
         self.velocity_y: int = 0
@@ -101,6 +177,12 @@ class Body:
     def update(self, screen: Surface, next_pos: set[int, int]) -> None:
         self.__update_vel(next_pos)
         self.__update_pos(next_pos)
+
+        self.draw(screen)
+
+    def draw(self, screen):
+        draw.rect(screen, BLACK, [
+                  self.x-1, self.y-1, self.size+2, self.size+2])
 
         draw.rect(screen, self.color, [
                   self.x, self.y, self.size, self.size])
@@ -131,8 +213,7 @@ class Head(Body):
     def update(self, screen: Surface) -> None:
         self.__update_pos()
 
-        draw.rect(screen, WHITE, [self.x,
-                  self.y, self.size, self.size])
+        self.draw(screen)
 
     def __update_pos(self):
         if self.direction != None:
