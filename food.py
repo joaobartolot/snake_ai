@@ -1,4 +1,4 @@
-from pygame import draw
+from pygame import Surface, draw
 from constants import GREEN, HEIGH, WIDTH
 import random
 
@@ -9,9 +9,10 @@ class Food:
         self.x = random.randint(0, ((WIDTH-self.size)/10)) * 10
         self.y = random.randint(0, ((HEIGH-self.size)/10)) * 10
 
-    def draw(self, screen):
-        draw.rect(screen, GREEN, [self.x,
-                  self.y, self.size, self.size])
+    def update(self, screen: Surface = None, draw: bool = True):
+        if screen != None and draw:
+            draw.rect(screen, GREEN, [self.x,
+                                      self.y, self.size, self.size])
 
     def pos(self) -> set[int, int]:
         return self.x, self.y

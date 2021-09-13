@@ -1,15 +1,16 @@
+import numpy as np
 import pygame
 from visionenum import Direction, Vision
 from food import Food
 from pygame.constants import HAT_CENTERED
-from constants import BLACK, GREEN, GREY, HEIGH, RED, WHITE, WIDTH
+from constants import AI_PLAYING, BLACK, GREEN, GREY, HEIGH, RED, WHITE, WIDTH
 from pygame import Surface, draw
 from pygame import K_LEFT, K_RIGHT, K_UP, K_DOWN
 import math
 
 
 class Snake:
-    def __init__(self):
+    def __init__(self, direction: Direction = None):
         self.head: Head = Head()
         self.body: list[Body] = [
             Body(self.head.x - self.head.size, self.head.y),
@@ -17,22 +18,13 @@ class Snake:
         ]
         self.vision: dict[str, tuple[(Vision, int)]] = {}
         self.score = 0
+        self.head.direction = direction
+        self.best_distance_food = WIDTH
+        self.lifetime = 0
+        self.life_left = 200
 
     def look_around(self, food: Food):
         # TODO: implement vision for the AI
-        # look_x = (
-        #     (self.head.x + self.head.size) if self.vel() == (10, 0) else 0,
-        #     (self.head.x - self.head.size) if self.vel() == (-10, 0) else WIDTH,
-        # )
-        # look_y = (
-        #     (self.head.y + self.head.size) if self.vel() == (0, 10) else 0,
-        #     (self.head.y - self.head.size) if self.vel() == (0, -10) else HEIGH,
-        # )
-
-        # wall_dist = self.__get_wall_dist()
-        # food_dist = self.
-        # body_dist = []
-
         self.vision['left'] = (Vision.WALL, self.head.x)
         self.vision['right'] = (Vision.WALL,  WIDTH - self.head.x)
         self.vision['up'] = (Vision.WALL, self.head.y)
@@ -49,9 +41,13 @@ class Snake:
             if food.x == x and food.y == self.head.y:
                 if self.head.x > x:
                     self.vision['left'] = (Vision.FOOD, self.head.x - x)
+                    if self.vision['left'][1] < self.best_distance_food:
+                        self.best_distance_food = self.vision['left'][1]
                 else:
                     if self.vision['right'][0] != Vision.BODY or self.vision['right'][1] < x-self.head.x:
                         self.vision['right'] = (Vision.FOOD,  x - self.head.x)
+                        if self.vision['right'][1] < self.best_distance_food:
+                            self.best_distance_food = self.vision['right'][1]
                         break
 
         for y in range(0, HEIGH + self.head.size, self.head.size):
@@ -93,37 +89,47 @@ class Snake:
                     draw.circle(screen, color,  (x + (self.head.size/2), (self.head.y +
                                                                           (self.head.size/2))), 2)
 
-    def __get_wall_dist(self):
-        # returns the distance from the snake's head to the wall for all 8 directions
-        x, y = self.head.x, self.head.y
-        return (
-            x,
-            math.sqrt((x**2 + y**2)),
-            y,
-            math.sqrt(((WIDTH - x)**2 + y**2)),
-            WIDTH - x,
-            math.sqrt(((WIDTH - x)**2 + (HEIGH - y)**2)),
-            (HEIGH - y),
-            math.sqrt((x**2 + (HEIGH - y)**2)),
-        )
+    def get_vision_data(self) -> list[int, int, int, int]:
+        return np.array([[
+            self.vision['left'][0].value,
+            self.vision['right'][0].value,
+            self.vision['up'][0].value,
+            self.vision['down'][0].value,
+        ]])
 
-    def update(self, screen, show_vision=False):
+    def get_fitness(self):
+        return (self.score**2)*(self.lifetime ** 2)
+
+    def update(self, screen: Surface = None, draw: bool = False, show_vision: bool = False):
+        self.lifetime += 1
+        self.life_left -= 1
         last_head_pos = self.head.pos()
-        self.head.update(screen)
-
+        if screen != None and draw:
+            self.head.update(screen)
+        else:
+            self.head.update(draw=draw)
         pos = []
 
         for i, b in enumerate(self.body):
             if self.head.moving:
                 if (i == 0):
                     pos.append(b.pos())
-                    b.update(screen, last_head_pos)
+                    if screen != None and draw:
+                        b.update(last_head_pos, screen)
+                    else:
+                        b.update(last_head_pos, draw=draw)
                 else:
                     pos.append(b.pos())
-                    b.update(screen, pos[0])
+                    if screen != None and draw:
+                        b.update(pos[0], screen)
+                    else:
+                        b.update(pos[0], draw=draw)
                     pos.pop(0)
             else:
-                b.update(screen, b.pos())
+                if screen != None and draw:
+                    b.update(b.pos(), screen)
+                else:
+                    b.update(b.pos(), draw=draw)
 
         if show_vision:
             self.__draw_vision(screen)
@@ -146,13 +152,19 @@ class Snake:
             self.body.append(Body(last.x, last.y + last.size))
 
     def is_dead(self):
+        if AI_PLAYING and self.life_left == 0:
+            return True
+
         for b in self.body:
             if self.head.pos() == b.pos():
+                self.score += -0.25
                 return True
 
         if self.head.x > WIDTH or self.head.x < 0:
+            self.score += -0.1
             return True
         elif self.head.y > HEIGH or self.head.y == -10:
+            self.score += -0.1
             return True
 
         return False
@@ -174,11 +186,12 @@ class Body:
         self.direction: Direction = None
         self.color = c
 
-    def update(self, screen: Surface, next_pos: set[int, int]) -> None:
+    def update(self, next_pos: set[int, int], screen: Surface = None, draw: bool = True) -> None:
         self.__update_vel(next_pos)
         self.__update_pos(next_pos)
 
-        self.draw(screen)
+        if screen != None and draw:
+            self.draw(screen)
 
     def draw(self, screen):
         draw.rect(screen, BLACK, [
@@ -210,10 +223,11 @@ class Head(Body):
         self.moving = False
         self.velocity: int = 10
 
-    def update(self, screen: Surface) -> None:
+    def update(self, screen: Surface = None, draw: bool = True) -> None:
         self.__update_pos()
 
-        self.draw(screen)
+        if screen != None and draw:
+            self.draw(screen)
 
     def __update_pos(self):
         if self.direction != None:

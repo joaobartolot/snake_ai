@@ -13,4 +13,4 @@ GREY = (100, 100, 100)
 # Settings
 WIDTH = 420
 HEIGH = 360
-AI_PLAYING = False
+AI_PLAYING = True
