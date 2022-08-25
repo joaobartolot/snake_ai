@@ -1,18 +1,18 @@
-function Food() {
-  this.x = 0;
-  this.y = 0;
+class Food {
+  constructor() {
+    this.shize = 20;
+    this.updateLocation();
+  }
 
-  this.updateLocation = function () {
-    let cols = floor(width / scl);
-    let rows = floor(height / scl);
-    this.x = floor(random(cols)) * scl;
-    this.y = floor(random(rows)) * scl;
-  };
+  updateLocation() {
+    let cols = floor(width / this.size);
+    let rows = floor(height / this.size);
 
-  this.show = function () {
+    this.pos = createVector(random(rows) * this.size, random(cols) * this.size);
+  }
+
+  show() {
     fill(0, 220, 0);
-    rect(this.x, this.y, scl, scl);
-  };
-
-  this.updateLocation();
+    rect(this.pos.x, this.pos.y, this.size, this.size);
+  }
 }

@@ -166,7 +166,7 @@
 
 class Snake {
   constructor() {
-    this.head = new Head(createVector(width / 2, height / 2));
+    this.head = new Head(createVector(width / 2, height / 2 + 10));
     this.tail = [
       new Body(createVector(this.head.pos.x - this.head.size, this.head.pos.y)),
       new Body(
@@ -174,27 +174,41 @@ class Snake {
       ),
     ];
   }
+
   live() {
     let curr;
+
+    let current_pos = this.head.pos.copy();
+    let next_pos;
+
+    this.head.move();
     this.head.draw();
+
     for (let i = 0; i < this.tail.length; i++) {
       curr = this.tail[i];
       if (this.head.direction) {
+        next_pos = curr.pos.copy();
+        curr.pos = current_pos.copy();
+        current_pos = next_pos.copy();
       }
       curr.draw();
     }
   }
-  eat() {}
+  eat(food) {
+    if (this.head.pos == food.pos)
+      
+  }
   checkDeath() {}
 }
 
 class Body {
-  constructor(vector) {
+  constructor(vector, color) {
     this.pos = vector;
     this.size = 20;
+    this.color = color ?? 255;
   }
   draw() {
-    fill(255);
+    fill(this.color);
     rect(this.pos.x, this.pos.y, this.size, this.size);
   }
 }

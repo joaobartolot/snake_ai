@@ -58,13 +58,13 @@ function draw() {
 
 function keyPressed() {
   if (keyCode === UP_ARROW) {
-    snake.dir(0, -1);
+    snake.head.direction = createVector(0, -20);
   } else if (keyCode === DOWN_ARROW) {
-    snake.dir(0, 1);
+    snake.head.direction = createVector(0, 20);
   } else if (keyCode === RIGHT_ARROW) {
-    snake.dir(1, 0);
+    snake.head.direction = createVector(20, 0);
   } else if (keyCode === LEFT_ARROW) {
-    snake.dir(-1, 0);
+    snake.head.direction = createVector(-20, 0);
   }
 
   if (keyCode === 70) {
